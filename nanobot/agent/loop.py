@@ -29,6 +29,7 @@ from nanobot.agent.tools.search import GlobTool, GrepTool
 from nanobot.agent.tools.shell import ExecTool
 from nanobot.agent.tools.self import MyTool
 from nanobot.agent.tools.spawn import SpawnTool
+from nanobot.agent.tools.mcp import MCPToolWrapper
 from nanobot.agent.tools.web import WebFetchTool, WebSearchTool
 from nanobot.bus.events import InboundMessage, OutboundMessage
 from nanobot.bus.queue import MessageBus
@@ -718,6 +719,7 @@ class AgentLoop:
                 channel=channel,
                 chat_id=chat_id,
                 content=final_content or "Background task completed.",
+                media=MCPToolWrapper.collect_pending_media(),
             )
 
         # Extract document text from media at the processing boundary so all
@@ -848,6 +850,7 @@ class AgentLoop:
             chat_id=msg.chat_id,
             content=final_content,
             metadata=meta,
+            media=MCPToolWrapper.collect_pending_media(),
         )
 
     def _sanitize_persisted_blocks(
