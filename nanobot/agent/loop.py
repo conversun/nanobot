@@ -305,6 +305,9 @@ class AgentLoop:
             self._mcp_stacks = await connect_mcp_servers(self._mcp_servers, self.tools)
             if self._mcp_stacks:
                 self._mcp_connected = True
+                mcp_names = [n for n in self.tools.tool_names if n.startswith("mcp_")]
+                if mcp_names and (spawn := self.tools.get("spawn")):
+                    spawn.set_mcp_tools(mcp_names)
             else:
                 logger.warning("No MCP servers connected successfully (will retry next message)")
         except asyncio.CancelledError:
