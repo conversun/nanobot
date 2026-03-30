@@ -442,6 +442,7 @@ class AgentLoop:
             retry_wait_callback=on_retry_wait,
             checkpoint_callback=_checkpoint,
             injection_callback=_drain_pending,
+            chat_id=chat_id,
         ))
         self._last_usage = result.usage
         if result.stop_reason == "max_iterations":

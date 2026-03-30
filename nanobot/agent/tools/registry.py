@@ -45,13 +45,8 @@ class ToolRegistry:
         name = schema.get("name")
         return name if isinstance(name, str) else ""
 
-    def get_definitions(self) -> list[dict[str, Any]]:
-        """Get tool definitions with stable ordering for cache-friendly prompts.
-
-        Built-in tools are sorted first as a stable prefix, then MCP tools are
-        sorted and appended.  The result is cached until the next
-        register/unregister call.
-        """
+    def _sorted_definitions(self) -> list[dict[str, Any]]:
+        """Return cached sorted definitions (unfiltered)."""
         if self._cached_definitions is not None:
             return self._cached_definitions
 
@@ -69,6 +64,25 @@ class ToolRegistry:
         mcp_tools.sort(key=self._schema_name)
         self._cached_definitions = builtins + mcp_tools
         return self._cached_definitions
+
+    def get_definitions(self, chat_id: str | None = None) -> list[dict[str, Any]]:
+        """Get tool definitions with stable ordering for cache-friendly prompts.
+
+        Built-in tools are sorted first as a stable prefix, then MCP tools are
+        sorted and appended. When chat_id is provided, MCP tools whose server
+        restricts `allowedChats` to other chats are filtered out.
+        """
+        definitions = self._sorted_definitions()
+        if chat_id is None:
+            return definitions
+        # Filter by chat scope without mutating the cached list.
+        allowed: list[dict[str, Any]] = []
+        for schema in definitions:
+            tool_name = self._schema_name(schema)
+            tool = self._tools.get(tool_name)
+            if tool is None or not hasattr(tool, "is_allowed_for") or tool.is_allowed_for(chat_id):
+                allowed.append(schema)
+        return allowed
 
     def prepare_call(
         self,
@@ -97,12 +111,14 @@ class ToolRegistry:
             )
         return tool, cast_params, None
 
-    async def execute(self, name: str, params: dict[str, Any]) -> Any:
+    async def execute(self, name: str, params: dict[str, Any], chat_id: str | None = None) -> Any:
         """Execute a tool by name with given parameters."""
         _HINT = "\n\n[Analyze the error above and try a different approach.]"
         tool, params, error = self.prepare_call(name, params)
         if error:
             return error + _HINT
+        if tool is not None and hasattr(tool, "is_allowed_for") and not tool.is_allowed_for(chat_id):
+            return f"Error: Tool '{name}' is not available in this chat." + _HINT
 
         try:
             assert tool is not None  # guarded by prepare_call()

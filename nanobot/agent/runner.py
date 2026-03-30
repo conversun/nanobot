@@ -74,6 +74,7 @@ class AgentRunSpec:
     retry_wait_callback: Any | None = None
     checkpoint_callback: Any | None = None
     injection_callback: Any | None = None
+    chat_id: str | None = None
 
 
 @dataclass(slots=True)
@@ -573,7 +574,7 @@ class AgentRunner:
         kwargs = self._build_request_kwargs(
             spec,
             messages,
-            tools=spec.tools.get_definitions(),
+            tools=spec.tools.get_definitions(chat_id=spec.chat_id),
         )
         if hook.wants_streaming():
             async def _stream(delta: str) -> None:
@@ -686,9 +687,17 @@ class AgentRunner:
             return prep_error + _HINT, event, RuntimeError(prep_error) if spec.fail_on_tool_error else None
         try:
             if tool is not None:
+                if hasattr(tool, "is_allowed_for") and not tool.is_allowed_for(spec.chat_id):
+                    event = {
+                        "name": tool_call.name,
+                        "status": "error",
+                        "detail": "tool not allowed in this chat",
+                    }
+                    msg = f"Error: Tool '{tool_call.name}' is not available in this chat."
+                    return msg + _HINT, event, RuntimeError(msg) if spec.fail_on_tool_error else None
                 result = await tool.execute(**params)
             else:
-                result = await spec.tools.execute(tool_call.name, params)
+                result = await spec.tools.execute(tool_call.name, params, chat_id=spec.chat_id)
         except asyncio.CancelledError:
             raise
         except BaseException as exc:
@@ -913,7 +922,7 @@ class AgentRunner:
             self.provider,
             spec.model,
             messages,
-            spec.tools.get_definitions(),
+            spec.tools.get_definitions(chat_id=spec.chat_id),
         )
         if estimate <= budget:
             return messages
