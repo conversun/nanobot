@@ -1,12 +1,13 @@
 [project]
 name = "nanobot-ai"
-version = "0.1.5.post1"
+version = "0.1.5.post3"
 description = "A lightweight personal AI assistant framework"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "nanobot contributors"}
+    {name = "Xubin Ren"},
+    {name = "the nanobot contributors"}
 ]
 keywords = ["ai", "agent", "chatbot"]
 classifiers = [
@@ -92,6 +93,9 @@ langsmith = [
 pdf = [
     "pymupdf>=1.25.0",
 ]
+olostep = [
+    "olostep>=0.1.0",
+]
 dev = [
     "pytest>=9.0.0,<10.0.0",
     "pytest-asyncio>=1.3.0,<2.0.0",
@@ -117,13 +121,6 @@ include = [
     "nanobot/templates/**/*.md",
     "nanobot/skills/**/*.md",
     "nanobot/skills/**/*.sh",
-]
-# Build-time generated assets that live under .gitignore'd paths but must ship
-# in the wheel/sdist. `artifacts` bypasses the VCS filter (unlike `include`).
-# The webui is compiled via `bun run build` into nanobot/web/dist/ right before
-# `python -m build` runs.
-artifacts = [
-    "nanobot/web/dist/**/*",
 ]
 
 [tool.hatch.build.targets.wheel]
